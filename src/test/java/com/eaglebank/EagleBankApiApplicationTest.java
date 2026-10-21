@@ -1,5 +1,6 @@
 package com.eaglebank;
 
+import com.eaglebank.web.AccountController;
 import com.eaglebank.web.AuthController;
 import com.eaglebank.web.UserController;
 import org.junit.jupiter.api.DisplayName;
@@ -19,9 +20,13 @@ class EagleBankApiApplicationTest {
 	@Autowired
 	private AuthController authController;
 
+	@Autowired
+	private AccountController accountController;
+
 	@Test
 	void givenSpringContext_whenAutowiring_thenShouldInjectFromContext() {
 		assertNotNull(userController);
 		assertNotNull(authController);
+		assertNotNull(accountController);
 	}
 }

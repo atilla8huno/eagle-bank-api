@@ -22,4 +22,22 @@ public final class DomainExceptions {
             super(message);
         }
     }
+
+    public static class ConflictException extends RuntimeException {
+        public ConflictException(String message) {
+            super(message);
+        }
+    }
+
+    public static class InsufficientFundsException extends RuntimeException {
+        public InsufficientFundsException(String message) {
+            super(message);
+        }
+    }
+
+    public static class InvalidTransactionException extends RuntimeException {
+        public InvalidTransactionException(String message) {
+            super(message);
+        }
+    }
 }
