@@ -1,15 +1,45 @@
 package com.eaglebank.domain;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+
 import java.time.Instant;
 
+@Entity
+@Table(
+        name = "users",
+        indexes = {
+                @Index(name = "idx_users_email", columnList = "email")
+        }
+)
 public class User {
+    @Id
+    @Column(name = "id", nullable = false, updatable = false, length = 32)
     private String id;
+
+    @Column(name = "name", nullable = false)
     private String name;
+
+    @Embedded
     private Address address;
+
+    @Column(name = "phone_number", nullable = false, length = 32)
     private String phoneNumber;
+
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
+
+    @Column(name = "password_hash", nullable = false)
     private String passwordHash;
+
+    @Column(name = "created_timestamp", nullable = false, updatable = false)
     private Instant createdTimestamp;
+
+    @Column(name = "updated_timestamp", nullable = false)
     private Instant updatedTimestamp;
 
     protected User() {
@@ -81,5 +111,17 @@ public class User {
 
     public Instant getUpdatedTimestamp() {
         return updatedTimestamp;
+    }
+
+    @Override
+    public final boolean equals(Object o) {
+        if (!(o instanceof User user)) return false;
+
+        return id.equals(user.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id.hashCode();
     }
 }

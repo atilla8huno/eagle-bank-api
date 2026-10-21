@@ -1,14 +1,29 @@
 package com.eaglebank.domain;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+
 import java.util.Objects;
 
+@Embeddable
 public class Address {
 
+    @Column(name = "address_line1", nullable = false)
     private String line1;
+
+    @Column(name = "address_line2")
     private String line2;
+
+    @Column(name = "address_line3")
     private String line3;
+
+    @Column(name = "address_town", nullable = false)
     private String town;
+
+    @Column(name = "address_county")
     private String county;
+
+    @Column(name = "address_postcode", nullable = false)
     private String postcode;
 
     public Address(String line1, String line2, String line3, String town, String county, String postcode) {
