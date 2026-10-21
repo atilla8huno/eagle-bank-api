@@ -12,6 +12,38 @@ tags:
   - name: user
     description: Manage a user
 paths:
+  /v1/auth/token:
+    post:
+      tags:
+        - auth
+      description: Authenticate user and return a signed JWT Bearer token
+      operationId: issueToken
+      requestBody:
+        description: User credentials (userId or email and optional password)
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthTokenRequest'
+        required: true
+      responses:
+        '200':
+          description: JWT Bearer token issued successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '400':
+          description: Invalid details supplied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestErrorResponse'
+        '401':
+          description: Invalid user credentials supplied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /v1/accounts:
     post:
       tags:
@@ -927,6 +959,37 @@ components:
                 type: string
               type:
                 type: string
+    AuthTokenRequest:
+      type: object
+      required:
+        - username
+      properties:
+        username:
+          type: string
+          description: User ID (usr-...) or registered email address
+          examples:
+            - "test.user@eaglebank.com"
+            - "usr-abc12345"
+        password:
+          type: string
+          description: User password
+    AuthTokenResponse:
+      type: object
+      required:
+        - accessToken
+        - tokenType
+        - expiresIn
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          examples:
+            - "Bearer"
+        expiresIn:
+          type: integer
+          examples:
+            - 3600
   securitySchemes:
     bearerAuth:
       type: http

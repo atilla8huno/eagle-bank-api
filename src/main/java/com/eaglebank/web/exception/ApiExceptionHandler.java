@@ -3,8 +3,10 @@ package com.eaglebank.web.exception;
 import com.eaglebank.web.dto.ErrorDtos.BadRequestErrorResponse;
 import com.eaglebank.web.dto.ErrorDtos.ErrorResponse;
 import com.eaglebank.web.dto.ErrorDtos.ValidationErrorDetail;
+import com.eaglebank.web.exception.DomainExceptions.AuthenticationFailedException;
 import com.eaglebank.web.exception.DomainExceptions.ForbiddenOperationException;
 import com.eaglebank.web.exception.DomainExceptions.ResourceNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -32,6 +34,21 @@ public class ApiExceptionHandler {
                 .body(new BadRequestErrorResponse("Invalid details supplied", details));
     }
 
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<BadRequestErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+        List<ValidationErrorDetail> details = ex.getConstraintViolations()
+                .stream()
+                .map(violation -> new ValidationErrorDetail(
+                        violation.getPropertyPath().toString(),
+                        violation.getMessage(),
+                        violation.getConstraintDescriptor().getAnnotation().annotationType().getSimpleName()
+                ))
+                .toList();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new BadRequestErrorResponse("The request didn't supply all the necessary data", details));
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -41,6 +58,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ForbiddenOperationException.class)
     public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenOperationException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AuthenticationFailedException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationFailed(AuthenticationFailedException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 

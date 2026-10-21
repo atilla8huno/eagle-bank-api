@@ -3,6 +3,7 @@ package com.eaglebank.web;
 import com.eaglebank.domain.Address;
 import com.eaglebank.domain.User;
 import com.eaglebank.repository.UserRepository;
+import com.eaglebank.security.Permission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,15 +11,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import java.time.Instant;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -80,6 +85,31 @@ class UserControllerTest {
     }
 
     @Test
+    @DisplayName("Should NOT create user on POST /v1/users when payload is invalid")
+    void givenInvalidRequest_whenCreateUser_thenShouldReturnBadRequestAndNotPersist() throws Exception {
+        //given
+        String invalidBody = """
+                {
+                  "name": "",
+                  "phoneNumber": "invalid-phone",
+                  "email": "not-an-email"
+                }
+                """;
+
+        //when
+        client.perform(post("/v1/users")
+                        .contentType(APPLICATION_JSON)
+                        .content(invalidBody)
+                        .accept(APPLICATION_JSON))
+                //then
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid details supplied"))
+                .andExpect(jsonPath("$.details", hasSize(greaterThanOrEqualTo(3))));
+
+        assertEquals(0, userRepository.count());
+    }
+
+    @Test
     @DisplayName("Should fetch user by ID on GET /v1/users/{userId}")
     void givenSeededUser_whenFetchUserByIdAsOwner_thenShouldReturnUser() throws Exception {
         //given
@@ -88,11 +118,42 @@ class UserControllerTest {
 
         //when
         client.perform(get("/v1/users/{userId}", userId)
+                        .with(customerJwt(userId))
                         .accept(APPLICATION_JSON))
                 //then
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(userId))
                 .andExpect(jsonPath("$.name").value("Alice Smith"));
+    }
+
+    @Test
+    @DisplayName("Should NOT fetch user on GET /v1/users/{userId} when userId format is invalid")
+    void givenInvalidUserIdPattern_whenFetchUserById_thenShouldReturnBadRequest() throws Exception {
+        //given
+        String invalidId = "invalid-id-format";
+
+        //when
+        client.perform(get("/v1/users/{userId}", invalidId)
+                        .with(customerJwt("usr-alice1"))
+                        .accept(APPLICATION_JSON))
+                //then
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details").isArray());
+    }
+
+    @Test
+    @DisplayName("Should NOT fetch user on GET /v1/users/{userId} when requested by non-owner")
+    void givenSeededUser_whenFetchUserByIdAsNonOwner_thenShouldReturnForbidden() throws Exception {
+        //given
+        userRepository.save(dummyUser("usr-bob2", "bob@eaglebank.com"));
+
+        //when
+        client.perform(get("/v1/users/{userId}", "usr-bob2")
+                        .with(customerJwt("usr-alice1"))
+                        .accept(APPLICATION_JSON))
+                //then
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("The user is not allowed to access the user details"));
     }
 
     @Test
@@ -103,10 +164,17 @@ class UserControllerTest {
 
         //when
         client.perform(get("/v1/users/{userId}", missingUserId)
+                        .with(customerJwt("usr-alice1"))
                         .accept(APPLICATION_JSON))
                 //then
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("User was not found"));
+    }
+
+    private RequestPostProcessor customerJwt(String userId) {
+        return jwt()
+                .jwt(builder -> builder.subject(userId).claim("scope", Permission.Role.CUSTOMER.toScopeClaim()))
+                .authorities(Permission.Role.CUSTOMER.getAuthorities());
     }
 
     private User dummyUser(String userId, String email) {

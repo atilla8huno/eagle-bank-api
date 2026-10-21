@@ -3,8 +3,14 @@ package com.eaglebank.web;
 import com.eaglebank.service.UserService;
 import com.eaglebank.web.dto.CreateUserRequest;
 import com.eaglebank.web.dto.UserResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +28,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
         produces = APPLICATION_JSON_VALUE
 )
 @Validated
+@Tag(name = "user", description = "Manage a user")
 public class UserController {
 
     private final UserService userService;
@@ -31,12 +38,20 @@ public class UserController {
     }
 
     @PostMapping(consumes = APPLICATION_JSON_VALUE)
+    @Operation(summary = "Create a new user")
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         return ResponseEntity.status(CREATED).body(userService.createUser(request));
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<UserResponse> fetchUserById(@PathVariable("userId") String userId) {
-        return ResponseEntity.ok(userService.fetchUserById(userId, userId));
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Fetch user by ID")
+    public ResponseEntity<UserResponse> fetchUserById(
+            @PathVariable("userId")
+            @Pattern(regexp = "^usr-[A-Za-z0-9]+$", message = "userId must match pattern ^usr-[A-Za-z0-9]+$")
+            String userId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(userService.fetchUserById(userId, jwt.getSubject()));
     }
 }
