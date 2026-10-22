@@ -3,9 +3,9 @@ package com.eaglebank.service;
 import com.eaglebank.domain.IdGenerator;
 import com.eaglebank.domain.User;
 import com.eaglebank.repository.UserRepository;
+import com.eaglebank.service.specification.UserSpecifications;
 import com.eaglebank.web.dto.CreateUserRequest;
 import com.eaglebank.web.dto.UserResponse;
-import com.eaglebank.web.exception.DomainExceptions.ForbiddenOperationException;
 import com.eaglebank.web.exception.DomainExceptions.ResourceNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -57,9 +57,11 @@ public class UserService {
     public UserResponse fetchUserById(String userId, String authenticatedUserId) {
         User user = findUser(userId);
 
-        if (isNotOwner(user, authenticatedUserId)) {
-            throw new ForbiddenOperationException("The user is not allowed to access the user details");
-        }
+        UserSpecifications.assertOwnedBy(
+                user,
+                authenticatedUserId,
+                "The user is not allowed to access the user details"
+        );
 
         return UserResponse.fromDomain(user);
     }
@@ -68,10 +70,6 @@ public class UserService {
         return userRepository
                 .findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User was not found"));
-    }
-
-    private boolean isNotOwner(User user, String authenticatedUserId) {
-        return !user.getId().equals(authenticatedUserId);
     }
 
     private String resolvePassword(String password) {

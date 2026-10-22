@@ -1,7 +1,6 @@
 package com.eaglebank.config;
 
 import com.eaglebank.security.Permission;
-import com.eaglebank.web.dto.ErrorDtos;
 import com.eaglebank.web.dto.ErrorDtos.ErrorResponse;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import jakarta.servlet.http.HttpServletResponse;
@@ -49,7 +48,6 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v1/users/**").hasAuthority(Permission.USERS_READ.getAuthority())
-                        .requestMatchers(HttpMethod.DELETE, "/v1/users/**").hasAuthority(Permission.USERS_WRITE.getAuthority())
                         .requestMatchers(HttpMethod.POST, "/v1/accounts").hasAuthority(Permission.ACCOUNTS_WRITE.getAuthority())
                         .requestMatchers(HttpMethod.GET, "/v1/accounts", "/v1/accounts/*").hasAuthority(Permission.ACCOUNTS_READ.getAuthority())
                         .requestMatchers(HttpMethod.POST, "/v1/accounts/*/transactions").hasAuthority(Permission.TRANSACTIONS_WRITE.getAuthority())

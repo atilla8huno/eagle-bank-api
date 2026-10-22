@@ -3,6 +3,7 @@ package com.eaglebank.security;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -46,6 +47,10 @@ public enum Permission {
             this.permissions = permissions;
         }
 
+        public Set<Permission> getPermissions() {
+            return permissions;
+        }
+
         public String toScopeClaim() {
             return permissions.stream()
                     .map(Permission::getScope)
@@ -60,5 +65,11 @@ public enum Permission {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + name()));
             return authorities;
         }
+    }
+
+    public static String allCustomerScopes() {
+        return Arrays.stream(values())
+                .map(Permission::getScope)
+                .collect(Collectors.joining(" "));
     }
 }

@@ -7,6 +7,4 @@ import java.util.List;
 
 public interface BankAccountRepository extends JpaRepository<BankAccount, String> {
     List<BankAccount> findAllByUserIdOrderByCreatedTimestampAsc(String userId);
-
-    boolean existsByUserId(String userId);
 }

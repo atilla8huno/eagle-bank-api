@@ -16,7 +16,6 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -82,8 +81,6 @@ class BankAccountRepositoryTest {
         List<BankAccount> accounts = repository.findAllByUserIdOrderByCreatedTimestampAsc("usr-h2200");
 
         //then
-        assertTrue(repository.existsByUserId("usr-h2200"));
-        assertFalse(repository.existsByUserId("usr-nobody"));
         assertEquals(2, accounts.size());
         assertEquals("01200001", accounts.get(0).getAccountNumber());
         assertEquals("01200002", accounts.get(1).getAccountNumber());

@@ -4,7 +4,6 @@ import com.eaglebank.web.dto.ErrorDtos.BadRequestErrorResponse;
 import com.eaglebank.web.dto.ErrorDtos.ErrorResponse;
 import com.eaglebank.web.dto.ErrorDtos.ValidationErrorDetail;
 import com.eaglebank.web.exception.DomainExceptions.AuthenticationFailedException;
-import com.eaglebank.web.exception.DomainExceptions.ConflictException;
 import com.eaglebank.web.exception.DomainExceptions.ForbiddenOperationException;
 import com.eaglebank.web.exception.DomainExceptions.InsufficientFundsException;
 import com.eaglebank.web.exception.DomainExceptions.InvalidTransactionException;
@@ -77,12 +76,6 @@ public class ApiExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(ex.getMessage()));
-    }
-
-    @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 

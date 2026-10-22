@@ -23,12 +23,6 @@ public final class DomainExceptions {
         }
     }
 
-    public static class ConflictException extends RuntimeException {
-        public ConflictException(String message) {
-            super(message);
-        }
-    }
-
     public static class InsufficientFundsException extends RuntimeException {
         public InsufficientFundsException(String message) {
             super(message);
