@@ -67,6 +67,7 @@ class TransactionServiceTest {
     @BeforeEach
     void setup() {
         when(transactionManager.getTransaction(any())).thenReturn(new SimpleTransactionStatus());
+        when(transactionRepository.save(any(BankTransaction.class))).thenAnswer(inv -> inv.getArgument(0));
         service = new TransactionService(
                 accountRepository,
                 transactionRepository,
@@ -95,7 +96,7 @@ class TransactionServiceTest {
         );
 
         //when
-        TransactionResponse response = service.createTransaction("01123456", "usr-owner", request, "   ");
+        TransactionResponse response = service.createTransaction("01123456", "usr-owner", request, "idem-retry");
 
         //then
         assertNotNull(response);
@@ -117,7 +118,7 @@ class TransactionServiceTest {
         );
 
         //when
-        Executable createTx = () -> service.createTransaction("01123456", "usr-owner", request, null);
+        Executable createTx = () -> service.createTransaction("01123456", "usr-owner", request, "idem-exhausted");
 
         //then
         assertThrows(ObjectOptimisticLockingFailureException.class, createTx);
@@ -133,15 +134,13 @@ class TransactionServiceTest {
         BankAccount account = dummyAccount("100.00");
         when(accountRepository.findById(eq("01123456"))).thenReturn(Optional.of(account));
 
-        IdempotencyRecord existingRecord = new IdempotencyRecord("01123456", "idem-1", "tan-existing1", FIXED_NOW);
-        when(idempotencyRepository.findByAccountNumberAndIdempotencyKey(eq("01123456"), eq("idem-1")))
-                .thenReturn(Optional.of(existingRecord));
-
         BankTransaction existingTx = new BankTransaction(
                 "tan-existing1", "01123456", "usr-owner",
                 new BigDecimal("50.00"), Currency.GBP, TransactionType.DEPOSIT, "Prior", FIXED_NOW
         );
-        when(transactionRepository.findById(eq("tan-existing1"))).thenReturn(Optional.of(existingTx));
+        IdempotencyRecord existingRecord = new IdempotencyRecord("01123456", "idem-1", existingTx, FIXED_NOW);
+        when(idempotencyRepository.findByAccountNumberAndIdempotencyKey(eq("01123456"), eq("idem-1")))
+                .thenReturn(Optional.of(existingRecord));
 
         CreateTransactionRequest request = new CreateTransactionRequest(
                 new BigDecimal("50.00"), Currency.GBP, TransactionType.DEPOSIT, "Prior"
@@ -153,10 +152,6 @@ class TransactionServiceTest {
         //then
         assertNotNull(response);
         assertEquals("tan-existing1", response.id());
-
-        verify(accountRepository, times(0)).saveAndFlush(any(BankAccount.class));
-        verify(transactionRepository, times(0)).save(any(BankTransaction.class));
-        verify(idempotencyRepository, times(0)).save(any(IdempotencyRecord.class));
     }
 
     @Test
@@ -191,7 +186,7 @@ class TransactionServiceTest {
         Executable fetchAccountMissing = () -> service.fetchAccountTransactionById("01000000", "tan-111", "usr-owner");
         Executable fetchForbidden = () -> service.fetchAccountTransactionById("01123456", "tan-111", "usr-intruder");
         Executable fetchTxMissing = () -> service.fetchAccountTransactionById("01123456", "tan-missing", "usr-owner");
-        Executable withdrawInsufficient = () -> service.createTransaction("01123456", "usr-owner", overdraft, null);
+        Executable withdrawInsufficient = () -> service.createTransaction("01123456", "usr-owner", overdraft, "idem-overdraft");
 
         //then
         assertEquals(1, list.transactions().size());

@@ -129,6 +129,7 @@ class TransactionControllerTest {
         BankAccount updatedAccount = accountRepository.findById(accountNumber).orElseThrow();
         assertEquals(new BigDecimal("174.75"), updatedAccount.getBalance());
         assertEquals(1, transactionRepository.count());
+        assertEquals(1, idempotencyRepository.count());
     }
 
     @Test

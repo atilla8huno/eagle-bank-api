@@ -143,7 +143,7 @@ public class ConcurrencyTransactionTest {
                         TransactionType.WITHDRAWAL,
                         "Withdrawal #" + attemptNumber
                 ),
-                null
+                "idem-withdrawal-" + attemptNumber
         );
     }
 

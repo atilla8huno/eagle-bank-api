@@ -31,7 +31,7 @@ class BankTransactionTest {
                 "Bonus",
                 t1
         );
-        IdempotencyRecord idem = new IdempotencyRecord("01123456", "key-1", "tan-xyz98765", t1);
+        IdempotencyRecord idem = new IdempotencyRecord("01123456", "key-1", tx, t1);
 
         //then
         assertEquals("tan-xyz98765", tx.getId());

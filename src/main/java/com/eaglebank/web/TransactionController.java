@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
@@ -56,7 +58,7 @@ public class TransactionController {
                 accountNumber,
                 jwt.getSubject(),
                 request,
-                idempotencyKey
+                resolveIdempotencyKey(idempotencyKey)
         );
         return ResponseEntity.status(CREATED).body(response);
     }
@@ -86,5 +88,11 @@ public class TransactionController {
         return ResponseEntity.ok(
                 transactionService.fetchAccountTransactionById(accountNumber, transactionId, jwt.getSubject())
         );
+    }
+
+    private String resolveIdempotencyKey(String idempotencyKey) {
+        return (idempotencyKey == null || idempotencyKey.isBlank())
+                ? UUID.randomUUID().toString()
+                : idempotencyKey.trim();
     }
 }

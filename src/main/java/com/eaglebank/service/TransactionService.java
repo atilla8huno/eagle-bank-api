@@ -26,6 +26,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -61,10 +62,10 @@ public class TransactionService {
             CreateTransactionRequest request,
             String idempotencyKey
     ) {
-        int attempt = 0;
-        while (true) {
+        Objects.requireNonNull(idempotencyKey, "idempotencyKey must not be null");
+
+        for (int attempt = 1; ; attempt++) {
             try {
-                attempt++;
                 return transactionTemplate.execute(status ->
                         executeAttempt(accountNumber, authenticatedUserId, request, idempotencyKey)
                 );
@@ -79,13 +80,7 @@ public class TransactionService {
 
     @Transactional(readOnly = true)
     public ListTransactionsResponse listAccountTransactions(String accountNumber, String authenticatedUserId) {
-        BankAccount account = findAccount(accountNumber);
-
-        AccountSpecifications.assertOwnedBy(
-                account,
-                authenticatedUserId,
-                "The user is not allowed to access the transactions"
-        );
+        findOwnedAccount(accountNumber, authenticatedUserId, "The user is not allowed to access the transactions");
 
         List<TransactionResponse> transactions = transactionRepository
                 .findAllByAccountNumberOrderByCreatedTimestampDesc(accountNumber)
@@ -102,14 +97,7 @@ public class TransactionService {
             String transactionId,
             String authenticatedUserId
     ) {
-        BankAccount account = findAccount(accountNumber);
-
-        AccountSpecifications.assertOwnedBy(
-                account,
-                authenticatedUserId,
-                "The user is not allowed to access the transaction"
-        );
-
+        findOwnedAccount(accountNumber, authenticatedUserId, "The user is not allowed to access the transaction");
         BankTransaction transaction = findTransaction(accountNumber, transactionId);
 
         return TransactionResponse.fromDomain(transaction);
@@ -121,67 +109,72 @@ public class TransactionService {
             CreateTransactionRequest request,
             String idempotencyKey
     ) {
-        BankAccount account = findAccount(accountNumber);
-
-        AccountSpecifications.assertOwnedBy(
-                account,
+        BankAccount account = findOwnedAccount(
+                accountNumber,
                 authenticatedUserId,
                 "The user is not allowed to access the transactions"
         );
 
-        if (hasIdempotencyKey(idempotencyKey)) {
-            Optional<IdempotencyRecord> existingKey = idempotencyRepository
-                    .findByAccountNumberAndIdempotencyKey(accountNumber, idempotencyKey);
-            if (existingKey.isPresent()) {
-                BankTransaction priorTx = transactionRepository
-                        .findById(existingKey.get().getTransactionId())
-                        .orElseThrow(() -> new DomainExceptions.ResourceNotFoundException("Transaction was not found"));
-                return TransactionResponse.fromDomain(priorTx);
-            }
-        }
+        return findExistingTransaction(accountNumber, idempotencyKey)
+                .orElseGet(() -> recordNewTransaction(account, authenticatedUserId, request, idempotencyKey));
+    }
 
+    private Optional<TransactionResponse> findExistingTransaction(String accountNumber, String idempotencyKey) {
+        return idempotencyRepository
+                .findByAccountNumberAndIdempotencyKey(accountNumber, idempotencyKey)
+                .map(IdempotencyRecord::getTransaction)
+                .map(TransactionResponse::fromDomain);
+    }
+
+    private TransactionResponse recordNewTransaction(
+            BankAccount account,
+            String authenticatedUserId,
+            CreateTransactionRequest request,
+            String idempotencyKey
+    ) {
         Money currentBalance = account.getMoneyBalance();
         Money transactionAmount = new Money(request.amount(), request.currency());
-        TransactionOperation operation = TransactionOperation.forType(request.type());
-        Money updatedBalance = operation.apply(currentBalance, transactionAmount);
+        Money updatedBalance = TransactionOperation.forType(request.type())
+                .apply(currentBalance, transactionAmount);
 
         Instant now = Instant.now(clock);
         account.updateBalance(updatedBalance, now);
         accountRepository.saveAndFlush(account);
 
-        BankTransaction transaction = new BankTransaction(
+        BankTransaction transaction = transactionRepository.save(new BankTransaction(
                 IdGenerator.nextTransactionId(),
-                accountNumber,
+                account.getAccountNumber(),
                 authenticatedUserId,
                 transactionAmount.amount(),
                 transactionAmount.currency(),
                 request.type(),
                 request.reference(),
                 now
-        );
-        transactionRepository.save(transaction);
+        ));
 
-        if (hasIdempotencyKey(idempotencyKey)) {
-            idempotencyRepository.save(new IdempotencyRecord(accountNumber, idempotencyKey, transaction.getId(), now));
-        }
+        idempotencyRepository.save(new IdempotencyRecord(
+                account.getAccountNumber(),
+                idempotencyKey,
+                transaction,
+                now
+        ));
 
         return TransactionResponse.fromDomain(transaction);
     }
 
-    private BankAccount findAccount(String accountNumber) {
-        return accountRepository
+    private BankAccount findOwnedAccount(String accountNumber, String authenticatedUserId, String forbiddenMessage) {
+        BankAccount account = accountRepository
                 .findById(accountNumber)
                 .orElseThrow(() -> new DomainExceptions.ResourceNotFoundException("Bank account was not found"));
+
+        AccountSpecifications.assertOwnedBy(account, authenticatedUserId, forbiddenMessage);
+        return account;
     }
 
     private BankTransaction findTransaction(String accountNumber, String transactionId) {
         return transactionRepository
                 .findByIdAndAccountNumber(transactionId, accountNumber)
                 .orElseThrow(() -> new DomainExceptions.ResourceNotFoundException("Transaction was not found"));
-    }
-
-    private boolean hasIdempotencyKey(String idempotencyKey) {
-        return idempotencyKey != null && !idempotencyKey.isBlank();
     }
 
     private void backoffWithJitter(int attempt) {

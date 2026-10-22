@@ -2,14 +2,19 @@ package com.eaglebank.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import org.hibernate.annotations.Immutable;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Immutable
@@ -31,8 +36,15 @@ public class IdempotencyRecord {
     @Column(name = "idempotency_key", nullable = false, updatable = false, length = 128)
     private String idempotencyKey;
 
-    @Column(name = "transaction_id", nullable = false, updatable = false, length = 32)
-    private String transactionId;
+    @ManyToOne(optional = false, fetch = FetchType.EAGER)
+    @JoinColumn(
+            name = "transaction_id",
+            referencedColumnName = "id",
+            nullable = false,
+            updatable = false,
+            foreignKey = @ForeignKey(name = "fk_idempotency_transaction")
+    )
+    private BankTransaction transaction;
 
     @Column(name = "created_timestamp", nullable = false, updatable = false)
     private Instant createdTimestamp;
@@ -40,11 +52,16 @@ public class IdempotencyRecord {
     protected IdempotencyRecord() {
     }
 
-    public IdempotencyRecord(String accountNumber, String idempotencyKey, String transactionId, Instant createdTimestamp) {
-        this.accountNumber = accountNumber;
-        this.idempotencyKey = idempotencyKey;
-        this.transactionId = transactionId;
-        this.createdTimestamp = createdTimestamp;
+    public IdempotencyRecord(
+            String accountNumber,
+            String idempotencyKey,
+            BankTransaction transaction,
+            Instant createdTimestamp
+    ) {
+        this.accountNumber = Objects.requireNonNull(accountNumber, "accountNumber must not be null");
+        this.idempotencyKey = Objects.requireNonNull(idempotencyKey, "idempotencyKey must not be null");
+        this.transaction = Objects.requireNonNull(transaction, "transaction must not be null");
+        this.createdTimestamp = Objects.requireNonNull(createdTimestamp, "createdTimestamp must not be null");
     }
 
     public Long getId() {
@@ -59,8 +76,12 @@ public class IdempotencyRecord {
         return idempotencyKey;
     }
 
+    public BankTransaction getTransaction() {
+        return transaction;
+    }
+
     public String getTransactionId() {
-        return transactionId;
+        return transaction.getId();
     }
 
     public Instant getCreatedTimestamp() {
