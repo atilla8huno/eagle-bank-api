@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -126,5 +127,16 @@ class AuthControllerTest {
                         .accept(APPLICATION_JSON))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Invalid user credentials supplied"));
+    }
+
+    @Test
+    @DisplayName("Should expose OpenAPI specification at /v3/api-docs")
+    void givenOpenApiEndpoint_whenGetApiDocs_thenShouldReturnSpecification() throws Exception {
+        //given & when
+        client.perform(get("/v3/api-docs").accept(APPLICATION_JSON))
+                //then
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.openapi").exists())
+                .andExpect(jsonPath("$.paths['/v1/accounts/{accountNumber}/transactions']").exists());
     }
 }
