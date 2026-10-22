@@ -84,7 +84,6 @@ val integrationTest = tasks.register<Test>("integrationTest") {
     }
 }
 
-/*
 val acceptanceTest = tasks.register<Test>("acceptanceTest") {
 	description = "Runs acceptance tests."
 	group = "verification"
@@ -98,7 +97,6 @@ val acceptanceTest = tasks.register<Test>("acceptanceTest") {
 		includeTestsMatching("*FeatureTest")
 	}
 }
-*/
 
 val jacocoExecFiles = files(
     layout.buildDirectory.file("jacoco/test.exec"),
@@ -107,7 +105,7 @@ val jacocoExecFiles = files(
 )
 
 tasks.jacocoTestReport {
-    dependsOn(tasks.test, integrationTest) //, acceptanceTest)
+    dependsOn(tasks.test, integrationTest, acceptanceTest)
     executionData.setFrom(jacocoExecFiles)
     reports {
         xml.required.set(true)
@@ -117,5 +115,5 @@ tasks.jacocoTestReport {
 }
 
 tasks.check {
-    dependsOn(integrationTest, tasks.jacocoTestReport) //, acceptanceTest)
+    dependsOn(integrationTest, tasks.jacocoTestReport, acceptanceTest)
 }

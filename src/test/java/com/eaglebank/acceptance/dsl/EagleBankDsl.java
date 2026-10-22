@@ -1,0 +1,23 @@
+package com.eaglebank.acceptance.dsl;
+
+
+import com.eaglebank.acceptance.driver.EagleBankApiProtocolDriver;
+import com.eaglebank.acceptance.driver.EagleBankApiProtocolDriverImpl;
+import com.eaglebank.acceptance.utils.Params;
+import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
+
+public class EagleBankDsl {
+
+    private final Params.DslContext context = new Params.DslContext();
+    private final UsersDsl users;
+
+    public EagleBankDsl(MockMvc client, ObjectMapper objectMapper) {
+        EagleBankApiProtocolDriver driver = new EagleBankApiProtocolDriverImpl(context, client, objectMapper);
+        this.users = new UsersDsl(context, driver);
+    }
+
+    public UsersDsl users() {
+        return users;
+    }
+}
