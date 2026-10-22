@@ -7,6 +7,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -23,6 +24,7 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
     private final ObjectMapper objectMapper;
     private final Map<String, String> userIdsByAlias = new HashMap<>();
     private final Map<String, String> bearerTokensByAlias = new HashMap<>();
+    private final Map<String, String> accountNumbersByAlias = new HashMap<>();
 
     public EagleBankApiProtocolDriverImpl(Params.DslContext context, MockMvc client, ObjectMapper objectMapper) {
         this.context = context;
@@ -108,6 +110,87 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
 
             JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
             assertEquals(targetCustomerAlias, body.get("name").asString());
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public void openBankAccount(String customerAlias, String accountAlias, String accountType) {
+        try {
+            String payload = """
+                    {
+                      "name": "%s",
+                      "accountType": "%s"
+                    }
+                    """.formatted(accountAlias, accountType);
+
+            MvcResult result = client.perform(post("/v1/accounts")
+                            .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(customerAlias))
+                            .contentType(APPLICATION_JSON)
+                            .content(payload)
+                            .accept(APPLICATION_JSON))
+                    .andReturn();
+
+            if (result.getResponse().getStatus() != 201) {
+                fail("Unable to open bank account '" + decode(accountAlias) + "' for customer '" + decode(customerAlias) + "'");
+            }
+
+            String accountNumber = objectMapper.readTree(result.getResponse().getContentAsString())
+                    .get("accountNumber").asString();
+            accountNumbersByAlias.put(accountAlias, accountNumber);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public void confirmAccountBalance(String actingCustomerAlias, String accountAlias, String expectedBalance, String currency) {
+        try {
+            String accountNumber = accountNumbersByAlias.get(accountAlias);
+            MvcResult result = client.perform(get("/v1/accounts/{accountNumber}", accountNumber)
+                            .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(actingCustomerAlias))
+                            .accept(APPLICATION_JSON))
+                    .andReturn();
+
+            int status = result.getResponse().getStatus();
+            if (status == 403) {
+                fail("Customer '" + decode(actingCustomerAlias) + "' is not allowed to access bank account '" + decode(accountAlias) + "'");
+            }
+            if (status != 200) {
+                fail("Unable to fetch bank account '" + decode(accountAlias) + "', status: " + status);
+            }
+
+            JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
+            BigDecimal actualBalance = new BigDecimal(body.get("balance").asString()).setScale(2);
+            BigDecimal expected = new BigDecimal(expectedBalance).setScale(2);
+            assertEquals(expected, actualBalance);
+            assertEquals(currency, body.get("currency").asString());
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public void confirmAccountListed(String actingCustomerAlias, String accountAlias) {
+        try {
+            String expectedAccountNumber = accountNumbersByAlias.get(accountAlias);
+            MvcResult result = client.perform(get("/v1/accounts")
+                            .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(actingCustomerAlias))
+                            .accept(APPLICATION_JSON))
+                    .andReturn();
+
+            if (result.getResponse().getStatus() != 200) {
+                fail("Unable to list accounts for '" + decode(actingCustomerAlias) + "'");
+            }
+
+            JsonNode accounts = objectMapper.readTree(result.getResponse().getContentAsString()).get("accounts");
+            for (JsonNode account : accounts) {
+                if (expectedAccountNumber.equals(account.get("accountNumber").asString())) {
+                    return;
+                }
+            }
+            fail("Account '" + decode(accountAlias) + "' was not listed for customer '" + decode(actingCustomerAlias) + "'");
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
