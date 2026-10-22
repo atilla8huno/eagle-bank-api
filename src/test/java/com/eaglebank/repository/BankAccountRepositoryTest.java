@@ -1,9 +1,11 @@
 package com.eaglebank.repository;
 
 import com.eaglebank.domain.AccountType;
+import com.eaglebank.domain.Address;
 import com.eaglebank.domain.BankAccount;
 import com.eaglebank.domain.Currency;
 import com.eaglebank.domain.Money;
+import com.eaglebank.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,11 +29,15 @@ class BankAccountRepositoryTest {
     private BankAccountRepository repository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private TestEntityManager entityManager;
 
     @BeforeEach
     void setup() {
         repository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
@@ -40,8 +46,9 @@ class BankAccountRepositoryTest {
         //given
         Instant t1 = Instant.parse("2026-10-21T09:00:00Z");
         Instant t2 = Instant.parse("2026-10-21T09:05:00Z");
+        User owner = userRepository.saveAndFlush(dummyUser("usr-h2200", t1));
         BankAccount account = new BankAccount(
-                "01200001", "10-10-10", "usr-h2200", "First Account",
+                "01200001", "10-10-10", owner, "First Account",
                 AccountType.PERSONAL, new BigDecimal("100.00"), Currency.GBP, t1, t1
         );
         repository.saveAndFlush(account);
@@ -65,12 +72,13 @@ class BankAccountRepositoryTest {
         //given
         Instant t1 = Instant.parse("2026-10-21T09:00:00Z");
         Instant t2 = Instant.parse("2026-10-21T09:05:00Z");
+        User owner = userRepository.saveAndFlush(dummyUser("usr-h2200", t1));
         BankAccount first = new BankAccount(
-                "01200001", "10-10-10", "usr-h2200", "First Account",
+                "01200001", "10-10-10", owner, "First Account",
                 AccountType.PERSONAL, new BigDecimal("100.00"), Currency.GBP, t1, t1
         );
         BankAccount second = new BankAccount(
-                "01200002", "10-10-10", "usr-h2200", "Second Account",
+                "01200002", "10-10-10", owner, "Second Account",
                 AccountType.PERSONAL, new BigDecimal("250.00"), Currency.GBP, t2, t2
         );
         repository.saveAndFlush(first);
@@ -84,5 +92,18 @@ class BankAccountRepositoryTest {
         assertEquals(2, accounts.size());
         assertEquals("01200001", accounts.get(0).getAccountNumber());
         assertEquals("01200002", accounts.get(1).getAccountNumber());
+    }
+
+    private User dummyUser(String userId, Instant now) {
+        return new User(
+                userId,
+                "Alice Smith",
+                new Address("1 Churchill Place", "Canary Wharf", null, "London", "Greater London", "E14 5HP"),
+                "+447700900123",
+                userId + "@eaglebank.com",
+                "hash",
+                now,
+                now
+        );
     }
 }

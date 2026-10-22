@@ -1,9 +1,11 @@
 package com.eaglebank.service.specification;
 
 import com.eaglebank.domain.AccountType;
+import com.eaglebank.domain.Address;
 import com.eaglebank.domain.BankAccount;
 import com.eaglebank.domain.Currency;
 import com.eaglebank.domain.Money;
+import com.eaglebank.domain.User;
 import com.eaglebank.web.exception.DomainExceptions;
 import com.eaglebank.web.exception.DomainExceptions.InsufficientFundsException;
 import com.eaglebank.web.exception.DomainExceptions.InvalidTransactionException;
@@ -58,8 +60,18 @@ class AccountSpecificationsTest {
     void givenAccountAndBalances_whenAssertingSpecifications_thenShouldEnforceRules() {
         //given
         Instant now = Instant.now();
+        User owner = new User(
+                "usr-owner1",
+                "Alice Smith",
+                new Address("1 Churchill Place", "Canary Wharf", null, "London", "Greater London", "E14 5HP"),
+                "+447700900123",
+                "alice@eaglebank.com",
+                "hash",
+                now,
+                now
+        );
         BankAccount account = new BankAccount(
-                "01111111", "10-10-10", "usr-owner1", "Account",
+                "01111111", "10-10-10", owner, "Account",
                 AccountType.PERSONAL, new BigDecimal("100.00"), Currency.GBP, now, now
         );
         Money balance = Money.gbp(new BigDecimal("100.00"));

@@ -2,6 +2,9 @@ package com.eaglebank.web;
 
 import com.eaglebank.domain.Address;
 import com.eaglebank.domain.User;
+import com.eaglebank.repository.BankAccountRepository;
+import com.eaglebank.repository.BankTransactionRepository;
+import com.eaglebank.repository.IdempotencyRepository;
 import com.eaglebank.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,10 +37,22 @@ class AuthControllerTest {
     private UserRepository userRepository;
 
     @Autowired
+    private BankAccountRepository accountRepository;
+
+    @Autowired
+    private BankTransactionRepository transactionRepository;
+
+    @Autowired
+    private IdempotencyRepository idempotencyRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
     void setup() {
+        idempotencyRepository.deleteAll();
+        transactionRepository.deleteAll();
+        accountRepository.deleteAll();
         userRepository.deleteAll();
     }
 

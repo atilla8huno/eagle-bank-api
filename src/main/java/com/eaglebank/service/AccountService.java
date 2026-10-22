@@ -3,7 +3,9 @@ package com.eaglebank.service;
 import com.eaglebank.domain.BankAccount;
 import com.eaglebank.domain.IdGenerator;
 import com.eaglebank.domain.Money;
+import com.eaglebank.domain.User;
 import com.eaglebank.repository.BankAccountRepository;
+import com.eaglebank.repository.UserRepository;
 import com.eaglebank.service.specification.AccountSpecifications;
 import com.eaglebank.web.dto.BankAccountResponse;
 import com.eaglebank.web.dto.BankAccountResponse.ListBankAccountsResponse;
@@ -20,22 +22,29 @@ import java.util.List;
 public class AccountService {
 
     private final BankAccountRepository accountRepository;
+    private final UserRepository userRepository;
     private final Clock clock;
 
-    public AccountService(BankAccountRepository accountRepository, Clock clock) {
+    public AccountService(
+            BankAccountRepository accountRepository,
+            UserRepository userRepository,
+            Clock clock
+    ) {
         this.accountRepository = accountRepository;
+        this.userRepository = userRepository;
         this.clock = clock;
     }
 
     @Transactional
     public BankAccountResponse createAccount(String authenticatedUserId, CreateBankAccountRequest request) {
+        User user = findUser(authenticatedUserId);
         Instant now = Instant.now(clock);
         Money initialBalance = Money.zeroGbp();
 
         BankAccount account = new BankAccount(
                 IdGenerator.nextAccountNumber(),
                 BankAccount.DEFAULT_SORT_CODE,
-                authenticatedUserId,
+                user,
                 request.name(),
                 request.accountType(),
                 initialBalance.amount(),
@@ -71,6 +80,12 @@ public class AccountService {
         );
 
         return BankAccountResponse.fromDomain(account);
+    }
+
+    private User findUser(String userId) {
+        return userRepository
+                .findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User was not found"));
     }
 
     private BankAccount findAccount(String accountNumber) {

@@ -9,6 +9,7 @@ import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DisplayName("Test suite of the class: BankTransaction")
@@ -19,12 +20,22 @@ class BankTransactionTest {
     void givenTransactionParameters_whenNew_thenShouldMaintainImmutableState() {
         //given
         Instant t1 = Instant.parse("2026-10-20T11:00:00Z");
+        User user = new User(
+                "usr-abc12345",
+                "Alice Smith",
+                new Address("1 Churchill Place", "Canary Wharf", null, "London", "Greater London", "E14 5HP"),
+                "+447700900123",
+                "alice@eaglebank.com",
+                "hash",
+                t1,
+                t1
+        );
 
         //when
         BankTransaction tx = new BankTransaction(
                 "tan-xyz98765",
                 "01123456",
-                "usr-abc12345",
+                user,
                 new BigDecimal("50.00"),
                 Currency.GBP,
                 TransactionType.DEPOSIT,
@@ -36,6 +47,7 @@ class BankTransactionTest {
         //then
         assertEquals("tan-xyz98765", tx.getId());
         assertEquals("01123456", tx.getAccountNumber());
+        assertSame(user, tx.getUser());
         assertEquals("usr-abc12345", tx.getUserId());
         assertEquals(new BigDecimal("50.00"), tx.getAmount());
         assertEquals(Currency.GBP, tx.getCurrency());

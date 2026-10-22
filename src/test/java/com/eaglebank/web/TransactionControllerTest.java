@@ -1,13 +1,16 @@
 package com.eaglebank.web;
 
 import com.eaglebank.domain.AccountType;
+import com.eaglebank.domain.Address;
 import com.eaglebank.domain.BankAccount;
 import com.eaglebank.domain.BankTransaction;
 import com.eaglebank.domain.Currency;
 import com.eaglebank.domain.TransactionType;
+import com.eaglebank.domain.User;
 import com.eaglebank.repository.BankAccountRepository;
 import com.eaglebank.repository.BankTransactionRepository;
 import com.eaglebank.repository.IdempotencyRepository;
+import com.eaglebank.repository.UserRepository;
 import com.eaglebank.security.Permission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,11 +54,15 @@ class TransactionControllerTest {
     @Autowired
     private IdempotencyRepository idempotencyRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @BeforeEach
     void setup() {
         idempotencyRepository.deleteAll();
         transactionRepository.deleteAll();
         accountRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
@@ -64,7 +71,8 @@ class TransactionControllerTest {
         //given
         String userId = "usr-alice1";
         String accountNumber = "01234567";
-        BankAccount initial = accountRepository.saveAndFlush(dummyAccount(accountNumber, userId, new BigDecimal("100.00")));
+        User alice = userRepository.saveAndFlush(dummyUser(userId));
+        BankAccount initial = accountRepository.saveAndFlush(dummyAccount(accountNumber, alice, new BigDecimal("100.00")));
         Long initialVersion = initial.getVersion();
 
         String body = """
@@ -103,7 +111,8 @@ class TransactionControllerTest {
         //given
         String userId = "usr-alice1";
         String accountNumber = "01234567";
-        accountRepository.saveAndFlush(dummyAccount(accountNumber, userId, new BigDecimal("250.00")));
+        User alice = userRepository.saveAndFlush(dummyUser(userId));
+        accountRepository.saveAndFlush(dummyAccount(accountNumber, alice, new BigDecimal("250.00")));
 
         String body = """
                 {
@@ -137,7 +146,8 @@ class TransactionControllerTest {
         //given
         String userId = "usr-alice1";
         String accountNumber = "01234567";
-        BankAccount initial = accountRepository.saveAndFlush(dummyAccount(accountNumber, userId, new BigDecimal("100.00")));
+        User alice = userRepository.saveAndFlush(dummyUser(userId));
+        BankAccount initial = accountRepository.saveAndFlush(dummyAccount(accountNumber, alice, new BigDecimal("100.00")));
         Long initialVersion = initial.getVersion();
 
         //when & then
@@ -186,7 +196,8 @@ class TransactionControllerTest {
         //given
         String userId = "usr-alice1";
         String accountNumber = "01234567";
-        accountRepository.saveAndFlush(dummyAccount(accountNumber, userId, new BigDecimal("100.00")));
+        User alice = userRepository.saveAndFlush(dummyUser(userId));
+        accountRepository.saveAndFlush(dummyAccount(accountNumber, alice, new BigDecimal("100.00")));
 
         //when & then
         client.perform(post("/v1/accounts/{accountNumber}/transactions", accountNumber)
@@ -239,9 +250,10 @@ class TransactionControllerTest {
         //given
         String userId = "usr-alice1";
         String accountNumber = "01234567";
-        accountRepository.saveAndFlush(dummyAccount(accountNumber, userId, new BigDecimal("200.50")));
+        User alice = userRepository.saveAndFlush(dummyUser(userId));
+        accountRepository.saveAndFlush(dummyAccount(accountNumber, alice, new BigDecimal("200.50")));
         transactionRepository.saveAndFlush(new BankTransaction(
-                "tan-abc12345", accountNumber, userId,
+                "tan-abc12345", accountNumber, alice,
                 new BigDecimal("200.50"), Currency.GBP, TransactionType.DEPOSIT, "Initial Deposit", FIXED_NOW
         ));
 
@@ -267,10 +279,11 @@ class TransactionControllerTest {
         String userId = "usr-alice1";
         String account1 = "01234567";
         String account2 = "01765432";
-        accountRepository.saveAndFlush(dummyAccount(account1, userId, new BigDecimal("200.50")));
-        accountRepository.saveAndFlush(dummyAccount(account2, userId, new BigDecimal("0.00")));
+        User alice = userRepository.saveAndFlush(dummyUser(userId));
+        accountRepository.saveAndFlush(dummyAccount(account1, alice, new BigDecimal("200.50")));
+        accountRepository.saveAndFlush(dummyAccount(account2, alice, new BigDecimal("0.00")));
         transactionRepository.saveAndFlush(new BankTransaction(
-                "tan-abc12345", account1, userId,
+                "tan-abc12345", account1, alice,
                 new BigDecimal("200.50"), Currency.GBP, TransactionType.DEPOSIT, "Initial Deposit", FIXED_NOW
         ));
 
@@ -301,11 +314,24 @@ class TransactionControllerTest {
                 .authorities(Permission.Role.CUSTOMER.getAuthorities());
     }
 
-    private BankAccount dummyAccount(String accountNumber, String userId, BigDecimal balance) {
+    private User dummyUser(String userId) {
+        return new User(
+                userId,
+                "Alice Smith",
+                new Address("1 Churchill Place", "Canary Wharf", null, "London", "Greater London", "E14 5HP"),
+                "+447700900123",
+                userId + "@eaglebank.com",
+                "$2a$10$dummyBcryptHashValueForTesting12345678901234567890",
+                FIXED_NOW,
+                FIXED_NOW
+        );
+    }
+
+    private BankAccount dummyAccount(String accountNumber, User user, BigDecimal balance) {
         return new BankAccount(
                 accountNumber,
                 "10-10-10",
-                userId,
+                user,
                 "Everyday Account",
                 AccountType.PERSONAL,
                 balance,

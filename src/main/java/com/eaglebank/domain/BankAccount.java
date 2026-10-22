@@ -4,8 +4,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
@@ -32,8 +36,15 @@ public class BankAccount {
     @Column(name = "sort_code", nullable = false, updatable = false, length = 16)
     private String sortCode;
 
-    @Column(name = "user_id", nullable = false, updatable = false, length = 32)
-    private String userId;
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "user_id",
+            referencedColumnName = "id",
+            nullable = false,
+            updatable = false,
+            foreignKey = @ForeignKey(name = "fk_bank_account_user")
+    )
+    private User user;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -65,7 +76,7 @@ public class BankAccount {
     public BankAccount(
             String accountNumber,
             String sortCode,
-            String userId,
+            User user,
             String name,
             AccountType accountType,
             BigDecimal balance,
@@ -75,7 +86,7 @@ public class BankAccount {
     ) {
         this.accountNumber = accountNumber;
         this.sortCode = sortCode;
-        this.userId = userId;
+        this.user = user;
         this.name = name;
         this.accountType = accountType;
         this.balance = balance.setScale(SCALE, ROUNDING_MODE);
@@ -111,8 +122,12 @@ public class BankAccount {
         return sortCode;
     }
 
+    public User getUser() {
+        return user;
+    }
+
     public String getUserId() {
-        return userId;
+        return user.getId();
     }
 
     public String getName() {

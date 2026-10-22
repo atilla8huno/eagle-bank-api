@@ -1,11 +1,13 @@
 package com.eaglebank.service;
 
 import com.eaglebank.domain.AccountType;
+import com.eaglebank.domain.Address;
 import com.eaglebank.domain.BankAccount;
 import com.eaglebank.domain.BankTransaction;
 import com.eaglebank.domain.Currency;
 import com.eaglebank.domain.IdempotencyRecord;
 import com.eaglebank.domain.TransactionType;
+import com.eaglebank.domain.User;
 import com.eaglebank.repository.BankAccountRepository;
 import com.eaglebank.repository.BankTransactionRepository;
 import com.eaglebank.repository.IdempotencyRepository;
@@ -135,7 +137,7 @@ class TransactionServiceTest {
         when(accountRepository.findById(eq("01123456"))).thenReturn(Optional.of(account));
 
         BankTransaction existingTx = new BankTransaction(
-                "tan-existing1", "01123456", "usr-owner",
+                "tan-existing1", "01123456", account.getUser(),
                 new BigDecimal("50.00"), Currency.GBP, TransactionType.DEPOSIT, "Prior", FIXED_NOW
         );
         IdempotencyRecord existingRecord = new IdempotencyRecord("01123456", "idem-1", existingTx, FIXED_NOW);
@@ -163,7 +165,7 @@ class TransactionServiceTest {
         when(accountRepository.findById(eq("01000000"))).thenReturn(Optional.empty());
 
         BankTransaction tx = new BankTransaction(
-                "tan-111", "01123456", "usr-owner",
+                "tan-111", "01123456", account.getUser(),
                 new BigDecimal("20.00"), Currency.GBP, TransactionType.WITHDRAWAL, "Lunch", FIXED_NOW
         );
         when(transactionRepository.findAllByAccountNumberOrderByCreatedTimestampDesc(eq("01123456")))
@@ -200,10 +202,20 @@ class TransactionServiceTest {
     }
 
     private BankAccount dummyAccount(String balance) {
+        User owner = new User(
+                "usr-owner",
+                "Alice Smith",
+                new Address("1 Churchill Place", "Canary Wharf", null, "London", "Greater London", "E14 5HP"),
+                "+447700900123",
+                "owner@eaglebank.com",
+                "hash",
+                FIXED_NOW,
+                FIXED_NOW
+        );
         return new BankAccount(
                 "01123456",
                 "10-10-10",
-                "usr-owner",
+                owner,
                 "Personal Account",
                 AccountType.PERSONAL,
                 new BigDecimal(balance),

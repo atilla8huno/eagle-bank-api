@@ -1,9 +1,11 @@
 package com.eaglebank.repository;
 
+import com.eaglebank.domain.Address;
 import com.eaglebank.domain.BankTransaction;
 import com.eaglebank.domain.Currency;
 import com.eaglebank.domain.IdempotencyRecord;
 import com.eaglebank.domain.TransactionType;
+import com.eaglebank.domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,12 +33,16 @@ class IdempotencyRepositoryTest {
     private BankTransactionRepository transactionRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private TestEntityManager entityManager;
 
     @BeforeEach
     void setup() {
         repository.deleteAll();
         transactionRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
@@ -44,10 +50,20 @@ class IdempotencyRepositoryTest {
     void givenIdempotencyRecord_whenSaveAndFind_thenShouldReturnRecord() {
         //given
         Instant now = Instant.parse("2026-10-21T10:00:00Z");
+        User owner = userRepository.saveAndFlush(new User(
+                "usr-owner",
+                "Alice Smith",
+                new Address("1 Churchill Place", "Canary Wharf", null, "London", "Greater London", "E14 5HP"),
+                "+447700900123",
+                "owner@eaglebank.com",
+                "hash",
+                now,
+                now
+        ));
         BankTransaction tx = transactionRepository.saveAndFlush(new BankTransaction(
                 "tan-h2001",
                 "01300001",
-                "usr-owner",
+                owner,
                 new BigDecimal("100.00"),
                 Currency.GBP,
                 TransactionType.DEPOSIT,

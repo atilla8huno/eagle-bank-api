@@ -144,7 +144,7 @@ public class TransactionService {
         BankTransaction transaction = transactionRepository.save(new BankTransaction(
                 IdGenerator.nextTransactionId(),
                 account.getAccountNumber(),
-                authenticatedUserId,
+                account.getUser(),
                 transactionAmount.amount(),
                 transactionAmount.currency(),
                 request.type(),

@@ -4,8 +4,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Immutable;
 
@@ -32,8 +36,15 @@ public class BankTransaction {
     @Column(name = "account_number", nullable = false, updatable = false, length = 16)
     private String accountNumber;
 
-    @Column(name = "user_id", nullable = false, updatable = false, length = 32)
-    private String userId;
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "user_id",
+            referencedColumnName = "id",
+            nullable = false,
+            updatable = false,
+            foreignKey = @ForeignKey(name = "fk_bank_transaction_user")
+    )
+    private User user;
 
     @Column(name = "amount", nullable = false, updatable = false, precision = 12, scale = 2)
     private BigDecimal amount;
@@ -58,7 +69,7 @@ public class BankTransaction {
     public BankTransaction(
             String id,
             String accountNumber,
-            String userId,
+            User user,
             BigDecimal amount,
             Currency currency,
             TransactionType type,
@@ -67,7 +78,7 @@ public class BankTransaction {
     ) {
         this.id = id;
         this.accountNumber = accountNumber;
-        this.userId = userId;
+        this.user = user;
         this.amount = amount.setScale(SCALE, ROUNDING_MODE);
         this.currency = currency;
         this.type = type;
@@ -83,8 +94,12 @@ public class BankTransaction {
         return accountNumber;
     }
 
+    public User getUser() {
+        return user;
+    }
+
     public String getUserId() {
-        return userId;
+        return user.getId();
     }
 
     public BigDecimal getAmount() {

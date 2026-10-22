@@ -9,6 +9,7 @@ import java.time.Instant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DisplayName("Test suite of the class: BankAccount")
@@ -20,12 +21,22 @@ class BankAccountTest {
         //given
         Instant t1 = Instant.parse("2026-10-21T10:00:00Z");
         Instant t2 = Instant.parse("2026-10-21T11:00:00Z");
+        User user = new User(
+                "usr-abc12345",
+                "Alice Smith",
+                new Address("1 Churchill Place", "Canary Wharf", null, "London", "Greater London", "E14 5HP"),
+                "+447700900123",
+                "alice@eaglebank.com",
+                "hash",
+                t1,
+                t1
+        );
 
         //when
         BankAccount account = new BankAccount(
                 "01123456",
                 BankAccount.DEFAULT_SORT_CODE,
-                "usr-abc12345",
+                user,
                 "Main Account",
                 AccountType.PERSONAL,
                 new BigDecimal("100.00"),
@@ -40,6 +51,7 @@ class BankAccountTest {
         //then
         assertEquals("01123456", account.getAccountNumber());
         assertEquals("10-10-10", account.getSortCode());
+        assertSame(user, account.getUser());
         assertEquals("usr-abc12345", account.getUserId());
         assertEquals("Savings Account", account.getName());
         assertEquals(AccountType.PERSONAL, account.getAccountType());

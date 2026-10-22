@@ -1,9 +1,14 @@
 package com.eaglebank.web;
 
 import com.eaglebank.domain.AccountType;
+import com.eaglebank.domain.Address;
 import com.eaglebank.domain.BankAccount;
 import com.eaglebank.domain.Currency;
+import com.eaglebank.domain.User;
 import com.eaglebank.repository.BankAccountRepository;
+import com.eaglebank.repository.BankTransactionRepository;
+import com.eaglebank.repository.IdempotencyRepository;
+import com.eaglebank.repository.UserRepository;
 import com.eaglebank.security.Permission;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,9 +48,21 @@ public class AccountControllerTest {
     @Autowired
     private BankAccountRepository accountRepository;
 
+    @Autowired
+    private BankTransactionRepository transactionRepository;
+
+    @Autowired
+    private IdempotencyRepository idempotencyRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
     @BeforeEach
     void setup() {
+        idempotencyRepository.deleteAll();
+        transactionRepository.deleteAll();
         accountRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
@@ -53,6 +70,7 @@ public class AccountControllerTest {
     void givenValidRequest_whenCreateAccount_thenShouldPersistAndReturnCreatedAccount() throws Exception {
         //given
         String userId = "usr-alice1";
+        userRepository.saveAndFlush(dummyUser(userId));
         String body = """
                 {
                   "name": "Everyday Account",
@@ -117,8 +135,10 @@ public class AccountControllerTest {
     void givenSeededAccounts_whenListAccounts_thenShouldReturnOnlyAuthenticatedUserAccounts() throws Exception {
         //given
         String userId = "usr-alice1";
-        accountRepository.save(dummyAccount("01234567", userId, new BigDecimal("100.00")));
-        accountRepository.save(dummyAccount("01999999", "usr-bob2", new BigDecimal("500.00")));
+        User alice = userRepository.saveAndFlush(dummyUser(userId));
+        User bob = userRepository.saveAndFlush(dummyUser("usr-bob2"));
+        accountRepository.save(dummyAccount("01234567", alice, new BigDecimal("100.00")));
+        accountRepository.save(dummyAccount("01999999", bob, new BigDecimal("500.00")));
 
         //when
         client.perform(get("/v1/accounts")
@@ -136,7 +156,8 @@ public class AccountControllerTest {
     void givenSeededAccount_whenFetchAccountByAccountNumberAsOwner_thenShouldReturnAccount() throws Exception {
         //given
         String userId = "usr-alice1";
-        accountRepository.save(dummyAccount("01234567", userId, new BigDecimal("250.50")));
+        User alice = userRepository.saveAndFlush(dummyUser(userId));
+        accountRepository.save(dummyAccount("01234567", alice, new BigDecimal("250.50")));
 
         //when
         client.perform(get("/v1/accounts/{accountNumber}", "01234567")
@@ -153,7 +174,8 @@ public class AccountControllerTest {
     void givenUnauthenticatedForbiddenOrMissingAccount_whenCallingAccountEndpoints_thenShouldReturnExpectedStatus() throws Exception {
         //given
         String userId = "usr-alice1";
-        accountRepository.save(dummyAccount("01234567", userId, new BigDecimal("0.00")));
+        User alice = userRepository.saveAndFlush(dummyUser(userId));
+        accountRepository.save(dummyAccount("01234567", alice, new BigDecimal("0.00")));
 
         //when & then
         client.perform(get("/v1/accounts/{accountNumber}", "01234567")
@@ -193,11 +215,24 @@ public class AccountControllerTest {
                 .authorities(Permission.Role.CUSTOMER.getAuthorities());
     }
 
-    private BankAccount dummyAccount(String accountNumber, String userId, BigDecimal balance) {
+    private User dummyUser(String userId) {
+        return new User(
+                userId,
+                "Alice Smith",
+                new Address("1 Churchill Place", "Canary Wharf", null, "London", "Greater London", "E14 5HP"),
+                "+447700900123",
+                userId + "@eaglebank.com",
+                "$2a$10$dummyBcryptHashValueForTesting12345678901234567890",
+                FIXED_NOW,
+                FIXED_NOW
+        );
+    }
+
+    private BankAccount dummyAccount(String accountNumber, User user, BigDecimal balance) {
         return new BankAccount(
                 accountNumber,
                 "10-10-10",
-                userId,
+                user,
                 "Everyday Account",
                 AccountType.PERSONAL,
                 balance,

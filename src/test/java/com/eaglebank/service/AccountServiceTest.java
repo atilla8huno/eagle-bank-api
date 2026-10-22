@@ -1,9 +1,12 @@
 package com.eaglebank.service;
 
 import com.eaglebank.domain.AccountType;
+import com.eaglebank.domain.Address;
 import com.eaglebank.domain.BankAccount;
 import com.eaglebank.domain.Currency;
+import com.eaglebank.domain.User;
 import com.eaglebank.repository.BankAccountRepository;
+import com.eaglebank.repository.UserRepository;
 import com.eaglebank.web.dto.BankAccountResponse;
 import com.eaglebank.web.dto.BankAccountResponse.ListBankAccountsResponse;
 import com.eaglebank.web.dto.CreateBankAccountRequest;
@@ -40,9 +43,12 @@ class AccountServiceTest {
     @Mock
     private BankAccountRepository accountRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
     @BeforeEach
     void setup() {
-        service = new AccountService(accountRepository, Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+        service = new AccountService(accountRepository, userRepository, Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
 
@@ -51,6 +57,7 @@ class AccountServiceTest {
     void givenCreateBankAccountRequest_whenCreateAccount_thenShouldSaveAndReturnAccount() {
         //given
         String userId = "usr-123";
+        when(userRepository.findById(eq(userId))).thenReturn(Optional.of(dummyUser(userId)));
         CreateBankAccountRequest request = new CreateBankAccountRequest("Personal Current Account", AccountType.PERSONAL);
 
         //when
@@ -104,6 +111,19 @@ class AccountServiceTest {
         verify(accountRepository).findById(eq(accountNumber));
     }
 
+    private User dummyUser(String userId) {
+        return new User(
+                userId,
+                "Alice Smith",
+                new Address("1 Churchill Place", "Canary Wharf", null, "London", "Greater London", "E14 5HP"),
+                "+447700900123",
+                userId + "@eaglebank.com",
+                "hash",
+                FIXED_NOW,
+                FIXED_NOW
+        );
+    }
+
     private void mockRepositoryForUser(String userId) {
         when(accountRepository.findAllByUserIdOrderByCreatedTimestampAsc(eq(userId)))
                 .thenReturn(List.of(dummyAccount("01123456", userId)));
@@ -111,7 +131,7 @@ class AccountServiceTest {
 
     private BankAccount dummyAccount(String accountNumber, String userId) {
         return new BankAccount(
-                accountNumber, "10-10-10", userId, "Personal Account",
+                accountNumber, "10-10-10", dummyUser(userId), "Personal Account",
                 AccountType.PERSONAL, new BigDecimal("50.00"), Currency.GBP, FIXED_NOW, FIXED_NOW
         );
     }
