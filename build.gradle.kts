@@ -57,6 +57,7 @@ tasks.test {
     }
     filter {
         excludeTestsMatching("com.eaglebank.EagleBankApiApplicationTest")
+        excludeTestsMatching("com.eaglebank.ConcurrencyTransactionTest")
         excludeTestsMatching("*IntegrationTest")
         excludeTestsMatching("*ControllerTest")
         excludeTestsMatching("*RepositoryTest")
@@ -75,6 +76,7 @@ val integrationTest = tasks.register<Test>("integrationTest") {
     }
     filter {
         includeTestsMatching("com.eaglebank.EagleBankApiApplicationTest")
+        includeTestsMatching("com.eaglebank.ConcurrencyTransactionTest")
         includeTestsMatching("*IntegrationTest")
         includeTestsMatching("*ControllerTest")
         includeTestsMatching("*RepositoryTest")
