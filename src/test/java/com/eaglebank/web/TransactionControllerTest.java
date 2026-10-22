@@ -1,6 +1,5 @@
 package com.eaglebank.web;
 
-
 import com.eaglebank.domain.AccountType;
 import com.eaglebank.domain.BankAccount;
 import com.eaglebank.domain.BankTransaction;
@@ -155,7 +154,7 @@ class TransactionControllerTest {
                                 }
                                 """)
                         .accept(APPLICATION_JSON))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Insufficient funds to process transaction"));
 
         client.perform(post("/v1/accounts/{accountNumber}/transactions", accountNumber)
@@ -171,7 +170,7 @@ class TransactionControllerTest {
                                 }
                                 """)
                         .accept(APPLICATION_JSON))
-                .andExpect(status().isUnprocessableEntity())
+                .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.message").value("Account balance cannot exceed maximum limit of 10000.00 GBP"));
 
         BankAccount unchangedAccount = accountRepository.findById(accountNumber).orElseThrow();

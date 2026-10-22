@@ -12,11 +12,13 @@ public class EagleBankDsl {
     private final Params.DslContext context = new Params.DslContext();
     private final UsersDsl users;
     private final AccountsDsl accounts;
+    private final TransactionsDsl transactions;
 
     public EagleBankDsl(MockMvc client, ObjectMapper objectMapper) {
         EagleBankApiProtocolDriver driver = new EagleBankApiProtocolDriverImpl(context, client, objectMapper);
         this.users = new UsersDsl(context, driver);
         this.accounts = new AccountsDsl(context, driver);
+        this.transactions = new TransactionsDsl(context, driver);
     }
 
     public UsersDsl users() {
@@ -25,5 +27,9 @@ public class EagleBankDsl {
 
     public AccountsDsl accounts() {
         return accounts;
+    }
+
+    public TransactionsDsl transactions() {
+        return transactions;
     }
 }

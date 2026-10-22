@@ -81,7 +81,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler({InsufficientFundsException.class, InvalidTransactionException.class})
     public ResponseEntity<ErrorResponse> handleUnprocessableEntity(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
                 .body(new ErrorResponse(ex.getMessage()));
     }
 

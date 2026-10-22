@@ -25,6 +25,7 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
     private final Map<String, String> userIdsByAlias = new HashMap<>();
     private final Map<String, String> bearerTokensByAlias = new HashMap<>();
     private final Map<String, String> accountNumbersByAlias = new HashMap<>();
+    private final Map<String, String> transactionIdsByAlias = new HashMap<>();
 
     public EagleBankApiProtocolDriverImpl(Params.DslContext context, MockMvc client, ObjectMapper objectMapper) {
         this.context = context;
@@ -191,6 +192,159 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
                 }
             }
             fail("Account '" + decode(accountAlias) + "' was not listed for customer '" + decode(actingCustomerAlias) + "'");
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public void deposit(String actingCustomerAlias, String accountAlias, String amount, String currency, String reference, String transactionAlias) {
+        submitTransaction(actingCustomerAlias, accountAlias, "deposit", amount, currency, reference, transactionAlias);
+    }
+
+    @Override
+    public void withdraw(String actingCustomerAlias, String accountAlias, String amount, String currency, String reference, String transactionAlias) {
+        submitTransaction(actingCustomerAlias, accountAlias, "withdrawal", amount, currency, reference, transactionAlias);
+    }
+
+    @Override
+    public void confirmTransactionRecorded(String actingCustomerAlias, String accountAlias, String type, String amount, String reference) {
+        try {
+            String accountNumber = accountNumbersByAlias.get(accountAlias);
+            MvcResult result = client.perform(get("/v1/accounts/{accountNumber}/transactions", accountNumber)
+                            .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(actingCustomerAlias))
+                            .accept(APPLICATION_JSON))
+                    .andReturn();
+
+            int status = result.getResponse().getStatus();
+            if (status == 403) {
+                fail("Customer '" + decode(actingCustomerAlias) + "' is not allowed to access transactions of '" + decode(accountAlias) + "'");
+            }
+            if (status != 200) {
+                fail("Unable to list transactions for '" + decode(accountAlias) + "'");
+            }
+
+            BigDecimal expectedAmount = new BigDecimal(amount).setScale(2);
+            JsonNode transactions = objectMapper.readTree(result.getResponse().getContentAsString()).get("transactions");
+            for (JsonNode tx : transactions) {
+                BigDecimal txAmount = new BigDecimal(tx.get("amount").asString()).setScale(2);
+                String txType = tx.get("type").asString();
+                if (txType.equals(type) && txAmount.equals(expectedAmount)) {
+                    return;
+                }
+            }
+            fail("Transaction of type '" + type + "' and amount '" + amount + "' was not found on '" + decode(accountAlias) + "'");
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public void confirmTransactionsListed(String actingCustomerAlias, String accountAlias, int expectedCount) {
+        try {
+            String accountNumber = accountNumbersByAlias.get(accountAlias);
+            MvcResult result = client.perform(get("/v1/accounts/{accountNumber}/transactions", accountNumber)
+                            .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(actingCustomerAlias))
+                            .accept(APPLICATION_JSON))
+                    .andReturn();
+
+            int status = result.getResponse().getStatus();
+            if (status == 403) {
+                fail("Customer '" + decode(actingCustomerAlias) + "' is not allowed to access transactions of '" + decode(accountAlias) + "'");
+            }
+            if (status != 200) {
+                fail("Unable to list transactions for '" + decode(accountAlias) + "'");
+            }
+
+            JsonNode transactions = objectMapper.readTree(result.getResponse().getContentAsString()).get("transactions");
+            assertEquals(expectedCount, transactions.size());
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
+    public void confirmTransactionDetails(
+            String actingCustomerAlias,
+            String accountAlias,
+            String transactionAlias,
+            String expectedType,
+            String expectedAmount
+    ) {
+        try {
+            String accountNumber = accountNumbersByAlias.get(accountAlias);
+            String transactionId = transactionIdsByAlias.getOrDefault(transactionAlias, "tan-missing00");
+
+            MvcResult result = client.perform(get("/v1/accounts/{accountNumber}/transactions/{transactionId}", accountNumber, transactionId)
+                            .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(actingCustomerAlias))
+                            .accept(APPLICATION_JSON))
+                    .andReturn();
+
+            int status = result.getResponse().getStatus();
+            if (status == 403) {
+                fail("Customer '" + decode(actingCustomerAlias) + "' is not allowed to access transaction '" + decode(transactionAlias) + "' on '" + decode(accountAlias) + "'");
+            }
+            if (status == 404) {
+                fail("Transaction '" + decode(transactionAlias) + "' was not found on '" + decode(accountAlias) + "'");
+            }
+            if (status != 200) {
+                fail("Unexpected status fetching transaction: " + status);
+            }
+
+            JsonNode tx = objectMapper.readTree(result.getResponse().getContentAsString());
+            if (expectedType != null && !expectedType.isEmpty()) {
+                assertEquals(expectedType, tx.get("type").asString());
+            }
+            if (expectedAmount != null && !expectedAmount.isEmpty()) {
+                assertEquals(new BigDecimal(expectedAmount).setScale(2), new BigDecimal(tx.get("amount").asString()).setScale(2));
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private void submitTransaction(
+            String actingCustomerAlias,
+            String accountAlias,
+            String type,
+            String amount,
+            String currency,
+            String reference,
+            String transactionAlias
+    ) {
+        try {
+            String accountNumber = accountNumbersByAlias.get(accountAlias);
+            String payload = """
+                    {
+                      "amount": %s,
+                      "currency": "%s",
+                      "type": "%s",
+                      "reference": "%s"
+                    }
+                    """.formatted(amount, currency, type, reference);
+
+            MvcResult result = client.perform(post("/v1/accounts/{accountNumber}/transactions", accountNumber)
+                            .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(actingCustomerAlias))
+                            .contentType(APPLICATION_JSON)
+                            .content(payload)
+                            .accept(APPLICATION_JSON))
+                    .andReturn();
+
+            int status = result.getResponse().getStatus();
+            if (status == 422) {
+                fail("Insufficient funds in '" + decode(accountAlias) + "' to process withdrawal of " + amount);
+            }
+            if (status == 403) {
+                fail("Customer '" + decode(actingCustomerAlias) + "' is not allowed to transact on '" + decode(accountAlias) + "'");
+            }
+            if (status != 201) {
+                fail("Unexpected status creating transaction: " + status);
+            }
+
+            if (transactionAlias != null && !transactionAlias.isEmpty()) {
+                String txId = objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asString();
+                transactionIdsByAlias.put(transactionAlias, txId);
+            }
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
