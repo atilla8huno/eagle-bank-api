@@ -9,6 +9,11 @@ Feature: Bank Account Management
     When "Alice" opens a "personal" bank account "EverydayAccount"
     Then "Alice" sees a balance of "0.00" "GBP" in "EverydayAccount"
 
+  Scenario: A customer cannot open a bank account without required details
+    Given a registered customer "Alice"
+    When "Alice" attempts to open a bank account without required details
+    Then the account access is rejected with "Opening bank account was rejected because required details were missing"
+
   Scenario: A customer views their bank accounts
     Given a registered customer "Alice"
     And "Alice" opens a "personal" bank account "EverydayAccount"
@@ -26,17 +31,10 @@ Feature: Bank Account Management
     When "Bob" attempts to view "AliceSavings"
     Then the account access is rejected with "Customer 'Bob' is not allowed to access bank account 'AliceSavings'"
 
-  @wip
-  Scenario: A customer cannot open a bank account without required details
-    Given a registered customer "Alice"
-    When "Alice" opens a bank account without required details
-    Then opening the account is rejected because required details are missing
-
-  @wip
   Scenario: A customer cannot view a bank account that does not exist
     Given a registered customer "Alice"
-    When "Alice" attempts to view a bank account that does not exist
-    Then the bank account is not found
+    When "Alice" attempts to view "UnknownAccount"
+    Then the account access is rejected with "Bank account 'UnknownAccount' was not found"
 
   @wip
   Scenario: A customer can update their own bank account

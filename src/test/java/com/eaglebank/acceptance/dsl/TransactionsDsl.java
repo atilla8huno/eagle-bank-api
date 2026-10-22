@@ -37,6 +37,14 @@ public class TransactionsDsl {
         driver.withdraw(customer, account, amount, currency, reference, transaction);
     }
 
+    public void submitTransactionWithoutRequiredDetails(String... args) {
+        Params params = new Params(context, args);
+        String customer = params.alias("customer", "Alice");
+        String account = params.alias("account", "PrimaryAccount");
+
+        driver.submitTransactionWithoutRequiredDetails(customer, account);
+    }
+
     public void confirmTransactionRecorded(String... args) {
         Params params = new Params(context, args);
         String customer = params.alias("customer", "Alice");

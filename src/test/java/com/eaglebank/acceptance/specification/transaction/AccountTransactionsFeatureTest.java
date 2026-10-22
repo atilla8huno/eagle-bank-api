@@ -1,6 +1,5 @@
 package com.eaglebank.acceptance.specification.transaction;
 
-
 import com.eaglebank.acceptance.dsl.EagleBankDsl;
 import io.cucumber.java.Before;
 import io.cucumber.java.en.Given;
@@ -94,6 +93,18 @@ public class AccountTransactionsFeatureTest {
                     "account: " + account,
                     "amount: " + amount,
                     "currency: " + currency
+            );
+        } catch (AssertionFailedError e) {
+            rejection = e;
+        }
+    }
+
+    @When("{string} attempts a transaction on {string} without required details")
+    public void attemptsATransactionWithoutRequiredDetails(String customer, String account) {
+        try {
+            dsl.transactions().submitTransactionWithoutRequiredDetails(
+                    "customer: " + customer,
+                    "account: " + account
             );
         } catch (AssertionFailedError e) {
             rejection = e;

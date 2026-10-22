@@ -93,9 +93,27 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
     }
 
     @Override
+    public void registerCustomerWithoutRequiredDetails() {
+        try {
+            MvcResult result = client.perform(post("/v1/users")
+                            .contentType(APPLICATION_JSON)
+                            .content("{}")
+                            .accept(APPLICATION_JSON))
+                    .andReturn();
+
+            if (result.getResponse().getStatus() == 400) {
+                fail("Registration was rejected because required details were missing");
+            }
+            fail("Expected registration to be rejected with 400 but received " + result.getResponse().getStatus());
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
     public void confirmCustomerProfile(String actingCustomerAlias, String targetCustomerAlias) {
         try {
-            String targetUserId = userIdsByAlias.get(targetCustomerAlias);
+            String targetUserId = userIdsByAlias.getOrDefault(targetCustomerAlias, "usr-missing00");
             MvcResult result = client.perform(get("/v1/users/{userId}", targetUserId)
                             .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(actingCustomerAlias))
                             .accept(APPLICATION_JSON))
@@ -104,6 +122,9 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
             int status = result.getResponse().getStatus();
             if (status == 403) {
                 fail("Customer '" + decode(actingCustomerAlias) + "' is not allowed to access profile of '" + decode(targetCustomerAlias) + "'");
+            }
+            if (status == 404) {
+                fail("Customer profile '" + decode(targetCustomerAlias) + "' was not found");
             }
             if (status != 200) {
                 fail("Expected customer profile for '" + decode(targetCustomerAlias) + "' but received status " + status);
@@ -146,9 +167,28 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
     }
 
     @Override
+    public void openBankAccountWithoutRequiredDetails(String customerAlias) {
+        try {
+            MvcResult result = client.perform(post("/v1/accounts")
+                            .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(customerAlias))
+                            .contentType(APPLICATION_JSON)
+                            .content("{}")
+                            .accept(APPLICATION_JSON))
+                    .andReturn();
+
+            if (result.getResponse().getStatus() == 400) {
+                fail("Opening bank account was rejected because required details were missing");
+            }
+            fail("Expected opening bank account to be rejected with 400 but received " + result.getResponse().getStatus());
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
     public void confirmAccountBalance(String actingCustomerAlias, String accountAlias, String expectedBalance, String currency) {
         try {
-            String accountNumber = accountNumbersByAlias.get(accountAlias);
+            String accountNumber = accountNumbersByAlias.getOrDefault(accountAlias, "01999999");
             MvcResult result = client.perform(get("/v1/accounts/{accountNumber}", accountNumber)
                             .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(actingCustomerAlias))
                             .accept(APPLICATION_JSON))
@@ -157,6 +197,9 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
             int status = result.getResponse().getStatus();
             if (status == 403) {
                 fail("Customer '" + decode(actingCustomerAlias) + "' is not allowed to access bank account '" + decode(accountAlias) + "'");
+            }
+            if (status == 404) {
+                fail("Bank account '" + decode(accountAlias) + "' was not found");
             }
             if (status != 200) {
                 fail("Unable to fetch bank account '" + decode(accountAlias) + "', status: " + status);
@@ -208,6 +251,26 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
     }
 
     @Override
+    public void submitTransactionWithoutRequiredDetails(String actingCustomerAlias, String accountAlias) {
+        try {
+            String accountNumber = accountNumbersByAlias.getOrDefault(accountAlias, "01999999");
+            MvcResult result = client.perform(post("/v1/accounts/{accountNumber}/transactions", accountNumber)
+                            .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(actingCustomerAlias))
+                            .contentType(APPLICATION_JSON)
+                            .content("{}")
+                            .accept(APPLICATION_JSON))
+                    .andReturn();
+
+            if (result.getResponse().getStatus() == 400) {
+                fail("Transaction was rejected because required details were missing");
+            }
+            fail("Expected transaction to be rejected with 400 but received " + result.getResponse().getStatus());
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Override
     public void confirmTransactionRecorded(String actingCustomerAlias, String accountAlias, String type, String amount, String reference) {
         try {
             String accountNumber = accountNumbersByAlias.get(accountAlias);
@@ -242,7 +305,7 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
     @Override
     public void confirmTransactionsListed(String actingCustomerAlias, String accountAlias, int expectedCount) {
         try {
-            String accountNumber = accountNumbersByAlias.get(accountAlias);
+            String accountNumber = accountNumbersByAlias.getOrDefault(accountAlias, "01999999");
             MvcResult result = client.perform(get("/v1/accounts/{accountNumber}/transactions", accountNumber)
                             .header(HttpHeaders.AUTHORIZATION, bearerTokensByAlias.get(actingCustomerAlias))
                             .accept(APPLICATION_JSON))
@@ -251,6 +314,9 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
             int status = result.getResponse().getStatus();
             if (status == 403) {
                 fail("Customer '" + decode(actingCustomerAlias) + "' is not allowed to access transactions of '" + decode(accountAlias) + "'");
+            }
+            if (status == 404) {
+                fail("Bank account '" + decode(accountAlias) + "' was not found");
             }
             if (status != 200) {
                 fail("Unable to list transactions for '" + decode(accountAlias) + "'");
@@ -272,7 +338,7 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
             String expectedAmount
     ) {
         try {
-            String accountNumber = accountNumbersByAlias.get(accountAlias);
+            String accountNumber = accountNumbersByAlias.getOrDefault(accountAlias, "01999999");
             String transactionId = transactionIdsByAlias.getOrDefault(transactionAlias, "tan-missing00");
 
             MvcResult result = client.perform(get("/v1/accounts/{accountNumber}/transactions/{transactionId}", accountNumber, transactionId)
@@ -285,6 +351,10 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
                 fail("Customer '" + decode(actingCustomerAlias) + "' is not allowed to access transaction '" + decode(transactionAlias) + "' on '" + decode(accountAlias) + "'");
             }
             if (status == 404) {
+                JsonNode errorBody = objectMapper.readTree(result.getResponse().getContentAsString());
+                if ("Bank account was not found".equals(errorBody.get("message").asString())) {
+                    fail("Bank account '" + decode(accountAlias) + "' was not found");
+                }
                 fail("Transaction '" + decode(transactionAlias) + "' was not found on '" + decode(accountAlias) + "'");
             }
             if (status != 200) {
@@ -313,7 +383,7 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
             String transactionAlias
     ) {
         try {
-            String accountNumber = accountNumbersByAlias.get(accountAlias);
+            String accountNumber = accountNumbersByAlias.getOrDefault(accountAlias, "01999999");
             String payload = """
                     {
                       "amount": %s,
@@ -336,6 +406,9 @@ public class EagleBankApiProtocolDriverImpl implements EagleBankApiProtocolDrive
             }
             if (status == 403) {
                 fail("Customer '" + decode(actingCustomerAlias) + "' is not allowed to transact on '" + decode(accountAlias) + "'");
+            }
+            if (status == 404) {
+                fail("Bank account '" + decode(accountAlias) + "' was not found");
             }
             if (status != 201) {
                 fail("Unexpected status creating transaction: " + status);

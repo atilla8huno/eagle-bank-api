@@ -23,6 +23,10 @@ public class UsersDsl {
         driver.registerAndAuthenticateCustomer(customer, phoneNumber, postcode, password);
     }
 
+    public void registerCustomerWithoutRequiredDetails() {
+        driver.registerCustomerWithoutRequiredDetails();
+    }
+
     public void confirmCustomerProfile(String... args) {
         Params params = new Params(context, args);
         String customer = params.alias("customer", "Alice");

@@ -35,6 +35,17 @@ Feature: Bank Account Transactions
     When "Bob" attempts to withdraw "50.00" "GBP" from "AliceVault"
     Then the transaction is rejected with "Customer 'Bob' is not allowed to transact on 'AliceVault'"
 
+  Scenario: A customer cannot deposit or withdraw on a bank account that does not exist
+    Given a registered customer "Alice"
+    When "Alice" attempts to withdraw "50.00" "GBP" from "UnknownAccount"
+    Then the transaction is rejected with "Bank account 'UnknownAccount' was not found"
+
+  Scenario: A customer cannot deposit or withdraw without required details
+    Given a registered customer "Alice"
+    And "Alice" has a "personal" bank account "MainAccount"
+    When "Alice" attempts a transaction on "MainAccount" without required details
+    Then the transaction is rejected with "Transaction was rejected because required details were missing"
+
   Scenario: A customer views all transactions on their bank account
     Given a registered customer "Alice"
     And "Alice" has a "personal" bank account "MainAccount"
@@ -48,6 +59,11 @@ Feature: Bank Account Transactions
     And "Alice" has a "personal" bank account "AliceVault"
     When "Bob" attempts to view transactions on "AliceVault"
     Then the transaction is rejected with "Customer 'Bob' is not allowed to access transactions of 'AliceVault'"
+
+  Scenario: A customer cannot list transactions on a bank account that does not exist
+    Given a registered customer "Alice"
+    When "Alice" attempts to view transactions on "UnknownAccount"
+    Then the transaction is rejected with "Bank account 'UnknownAccount' was not found"
 
   Scenario: A customer fetches a transaction on their bank account
     Given a registered customer "Alice"
@@ -63,6 +79,11 @@ Feature: Bank Account Transactions
     When "Bob" attempts to fetch transaction "VaultDeposit" on "AliceVault"
     Then the transaction is rejected with "Customer 'Bob' is not allowed to access transaction 'VaultDeposit' on 'AliceVault'"
 
+  Scenario: A customer cannot fetch a transaction on a bank account that does not exist
+    Given a registered customer "Alice"
+    When "Alice" attempts to fetch transaction "UnknownTransaction" on "UnknownAccount"
+    Then the transaction is rejected with "Bank account 'UnknownAccount' was not found"
+
   Scenario: A customer cannot fetch a transaction that does not exist
     Given a registered customer "Alice"
     And "Alice" has a "personal" bank account "MainAccount"
@@ -76,28 +97,3 @@ Feature: Bank Account Transactions
     And "Alice" deposits "80.00" "GBP" into "MainAccount" as "MainDeposit"
     When "Alice" attempts to fetch transaction "MainDeposit" on "OtherAccount"
     Then the transaction is rejected with "Transaction 'MainDeposit' was not found on 'OtherAccount'"
-
-  @wip
-  Scenario: A customer cannot deposit or withdraw without required details
-    Given a registered customer "Alice"
-    And "Alice" has a "personal" bank account "MainAccount"
-    When "Alice" attempts a transaction on "MainAccount" without required details
-    Then the transaction is rejected because required details are missing
-
-  @wip
-  Scenario: A customer cannot deposit or withdraw on a bank account that does not exist
-    Given a registered customer "Alice"
-    When "Alice" attempts to deposit into a bank account that does not exist
-    Then the bank account is not found
-
-  @wip
-  Scenario: A customer cannot list transactions on a bank account that does not exist
-    Given a registered customer "Alice"
-    When "Alice" attempts to list transactions on a bank account that does not exist
-    Then the bank account is not found
-
-  @wip
-  Scenario: A customer cannot fetch a transaction on a bank account that does not exist
-    Given a registered customer "Alice"
-    When "Alice" attempts to fetch a transaction on a bank account that does not exist
-    Then the bank account is not found

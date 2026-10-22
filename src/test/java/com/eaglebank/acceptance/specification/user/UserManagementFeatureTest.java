@@ -59,6 +59,15 @@ public class UserManagementFeatureTest {
         dsl.users().registerCustomer("customer: " + customer);
     }
 
+    @When("a visitor attempts to register without required details")
+    public void aVisitorAttemptsToRegisterWithoutRequiredDetails() {
+        try {
+            dsl.users().registerCustomerWithoutRequiredDetails();
+        } catch (AssertionFailedError e) {
+            rejection = e;
+        }
+    }
+
     @When("{string} attempts to view the profile of {string}")
     public void attemptsToViewProfile(String customer, String target) {
         try {

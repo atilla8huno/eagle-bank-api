@@ -63,6 +63,15 @@ public class BankAccountManagementFeatureTest {
         );
     }
 
+    @When("{string} attempts to open a bank account without required details")
+    public void attemptsToOpenABankAccountWithoutRequiredDetails(String customer) {
+        try {
+            dsl.accounts().openBankAccountWithoutRequiredDetails("customer: " + customer);
+        } catch (AssertionFailedError e) {
+            rejection = e;
+        }
+    }
+
     @When("{string} attempts to view {string}")
     public void attemptsToView(String customer, String account) {
         try {

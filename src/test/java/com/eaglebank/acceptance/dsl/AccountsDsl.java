@@ -1,6 +1,5 @@
 package com.eaglebank.acceptance.dsl;
 
-
 import com.eaglebank.acceptance.driver.EagleBankApiProtocolDriver;
 import com.eaglebank.acceptance.utils.Params;
 
@@ -21,6 +20,13 @@ public class AccountsDsl {
         String accountType = params.optional("accountType", "personal");
 
         driver.openBankAccount(customer, account, accountType);
+    }
+
+    public void openBankAccountWithoutRequiredDetails(String... args) {
+        Params params = new Params(context, args);
+        String customer = params.alias("customer", "Alice");
+
+        driver.openBankAccountWithoutRequiredDetails(customer);
     }
 
     public void confirmAccountBalance(String... args) {

@@ -7,6 +7,10 @@ Feature: Customer Profile Management
     When a visitor registers as customer "Alice"
     Then "Alice" can view the profile of "Alice"
 
+  Scenario: A visitor cannot register without required details
+    When a visitor attempts to register without required details
+    Then the profile request is rejected with "Registration was rejected because required details were missing"
+
   Scenario: A registered customer can view their own profile
     Given a registered customer "Alice"
     Then "Alice" can view the profile of "Alice"
@@ -17,16 +21,10 @@ Feature: Customer Profile Management
     When "Alice" attempts to view the profile of "Bob"
     Then the profile request is rejected with "Customer 'Alice' is not allowed to access profile of 'Bob'"
 
-  @wip
-  Scenario: A visitor cannot register without required details
-    When a visitor registers as a customer without required details
-    Then the registration is rejected because required details are missing
-
-  @wip
   Scenario: A customer cannot view a profile that does not exist
     Given a registered customer "Alice"
-    When "Alice" attempts to view a profile that does not exist
-    Then the profile is not found
+    When "Alice" attempts to view the profile of "UnknownCustomer"
+    Then the profile request is rejected with "Customer profile 'UnknownCustomer' was not found"
 
   @wip
   Scenario: A customer can update their own profile
