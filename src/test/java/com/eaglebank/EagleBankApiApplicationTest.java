@@ -2,6 +2,7 @@ package com.eaglebank;
 
 import com.eaglebank.web.AccountController;
 import com.eaglebank.web.AuthController;
+import com.eaglebank.web.TransactionController;
 import com.eaglebank.web.UserController;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,19 +15,23 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @DisplayName("Test suite of the class: EagleBankApiApplication")
 class EagleBankApiApplicationTest {
 
-	@Autowired
-	private UserController userController;
+    @Autowired
+    private UserController userController;
 
-	@Autowired
-	private AuthController authController;
+    @Autowired
+    private AuthController authController;
 
-	@Autowired
-	private AccountController accountController;
+    @Autowired
+    private AccountController accountController;
 
-	@Test
-	void givenSpringContext_whenAutowiring_thenShouldInjectFromContext() {
-		assertNotNull(userController);
-		assertNotNull(authController);
-		assertNotNull(accountController);
-	}
+    @Autowired
+    private TransactionController transactionController;
+
+    @Test
+    void givenSpringContext_whenAutowiring_thenShouldInjectFromContext() {
+        assertNotNull(userController);
+        assertNotNull(authController);
+        assertNotNull(accountController);
+        assertNotNull(transactionController);
+    }
 }
